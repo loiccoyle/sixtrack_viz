@@ -31,7 +31,7 @@ class Losses:
                                self.df['y'].abs()*1e3,
                                mode='sphere',
                                colormap='viridis',
-                               scale_factor=0.7,
+                               scale_factor=1,
                                **kwargs
                                )
         losses.glyph.scale_mode = 'scale_by_vector'
