@@ -8,8 +8,7 @@ except ImportError:
     def tqdm(iter, *args, **kwargs):
         return iter
 from pathlib import Path
-from mayavi import mlab
-# from collections import OrderedDict
+import pyvista as pv
 
 from . import shapes
 
@@ -34,6 +33,14 @@ class Profile:
         df = pd.read_csv(self.file, delim_whitespace=True, names=cols,
                          skiprows=1, index_col=None)
         return df
+
+    def drop_interpolated(self):
+        self.df = self.df[self.df['name'] != 'interpolated']
+
+    def drop_consecutive_duplicates(self):
+        cols = ['aptype', 'aper1', 'aper2', 'aper3', 'aper4',
+                'aper5', 'aper6', 'aper7', 'aper8', 'xoff', 'yoff']
+        self.df = self.df.loc[(self.df[cols].shift() != self.df[cols]).any(axis=1)]
 
     def get_aperture(self, angle):
         rad_angle = math.radians(angle)
@@ -63,27 +70,38 @@ class Profile:
             func = funcs[row[1]]
             args = row[indices[row[1]]]
             return func(angle, *args)
-
         return np.apply_along_axis(calc_ape, 1, self.df.values, angle=angle)
 
+    @staticmethod
+    def polyline_from_points(points):
+        poly = pv.PolyData()
+        poly.points = points
+        the_cell = np.arange(0, len(points), dtype=np.int)
+        the_cell = np.insert(the_cell, 0, len(points))
+        poly.lines = the_cell
+        return poly
+
     def show(self, angles=np.linspace(0, 90, 20), aper_cutoff=50,
-             with_offset=False, **kwargs):
-        # 3d render
+             with_offset=False, plotter=None, style='line', **kwargs):
+        if style not in ['line', 'surf', 'point']:
+            cntnt = '"style" must be either "line", "surf" or "point".'
+            raise ValueError(cntnt)
+
+        if plotter is None:
+            plotter = pv.Plotter()
+
         Ss = []
         Ape_x = []
         Ape_y = []
-        for a in tqdm(angles, desc='Calculating aperture for angles'):
+        for a in tqdm(angles, desc='Computing aperture'):
             a = math.radians(a)
             tmpSs = self.df['s'].values
             tmpApe = self.get_aperture(a)
+            tmpApe_x = tmpApe * np.cos(a)
+            tmpApe_y = tmpApe * np.sin(a)
             if with_offset:
-                tmpHoff = self.df['xoff'].values
-                tmpVoff = self.df['yoff'].values
-                tmpApe_x = tmpApe*np.cos(a) + tmpHoff
-                tmpApe_y = tmpApe*np.sin(a) + tmpVoff
-            else:
-                tmpApe_x = tmpApe*np.cos(a)
-                tmpApe_y = tmpApe*np.sin(a)
+                tmpApe_x = tmpApe_x + self.df['xoff'].values
+                tmpApe_y = tmpApe_y + self.df['yoff'].values
 
             # cutoff to remove large apertures
             if aper_cutoff is not None and aper_cutoff > 0:
@@ -96,19 +114,21 @@ class Profile:
             Ape_x.append(tmpApe_x)
             Ape_y.append(tmpApe_y)
 
-        Ss = np.hstack(Ss)
-        Ape_x = np.hstack(Ape_x)
-        Ape_y = np.hstack(Ape_y)
+        if style == 'line':
+            for i, (s, x, y) in enumerate(zip(Ss, Ape_x, Ape_y)):
+                data = np.vstack([s, x, y]).T
+                lines = self.polyline_from_points(data)
+                plotter.add_mesh(lines, name=f'angle {angles[i]}')
 
-        if 'figure' not in kwargs.keys():
-            fig = mlab.figure(bgcolor=(0, 0, 0), size=(1920, 1080))
-            kwargs['figure'] = fig
-        else:
-            fig = kwargs['figure']
-        aperture = mlab.points3d(Ss,
-                                 Ape_x,
-                                 Ape_y,
-                                 mode='point',
-                                 **kwargs
-                                 )
-        return fig, aperture
+        elif style in ['point', 'surf']:
+            Ss = np.hstack(Ss)
+            Ape_x = np.hstack(Ape_x)
+            Ape_y = np.hstack(Ape_y)
+            points = pv.PolyData(np.vstack([Ss, Ape_x, Ape_y]).T)
+            if style == 'point':
+                plotter.add_mesh(points)
+            elif style == 'surf':
+                surf = points.delaunay_2d()
+                plotter.add_mesh(surf)
+
+        return plotter

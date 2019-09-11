@@ -2,7 +2,6 @@
 import argparse
 import numpy as np
 
-from mayavi import mlab
 
 from sixtrack_viz.aperture.profile import Profile
 from sixtrack_viz.aperture.losses import Losses
@@ -21,15 +20,24 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--offset',
                         help='Include hoizontal and vertical aperture offset',
                         action='store_true')
+    parser.add_argument('-s', '--style',
+                        help='Plotting style, either "point", "line" or "surf".',
+                        choices=['point', 'line', 'surf'],
+                        default='line')
     args = parser.parse_args()
 
     aper = Profile(args.file)
-    fig, aper = aper.show(angles=np.linspace(0, 90, args.angles),
-                          aper_cutoff=args.cuttoff,
-                          mask_points=10,
-                          with_offset=args.offset)
+
+    aper.drop_interpolated()
+    aper.drop_consecutive_duplicates()
+
+    plotter = aper.show(angles=np.linspace(0, 90, args.angles),
+                        aper_cutoff=args.cuttoff,
+                        with_offset=args.offset,
+                        style=args.style)
+    # plotter.show()
     if args.loss_file is not None:
         losses = Losses(args.loss_file)
-        fig, los = losses.show(figure=fig)
+        plotter = losses.show(plotter=plotter)
 
-    mlab.show()
+    plotter.show()

@@ -1,7 +1,8 @@
 import pandas as pd
+import numpy as np
 from pathlib import Path
 
-from mayavi import mlab
+import pyvista as pv
 
 
 class Losses:
@@ -20,20 +21,14 @@ class Losses:
                          skiprows=1, index_col=None)
         return df
 
-    def show(self, **kwargs):
-        if 'figure' not in kwargs.keys():
-            fig = mlab.figure()
-            kwargs['figure'] = fig
-        else:
-            fig = kwargs['figure']
-        losses = mlab.points3d(self.df['slos'],
-                               self.df['x'].abs()*1e3,
-                               self.df['y'].abs()*1e3,
-                               mode='sphere',
-                               colormap='viridis',
-                               scale_factor=1,
-                               **kwargs
-                               )
-        losses.glyph.scale_mode = 'scale_by_vector'
-        losses.mlab_source.dataset.point_data.scalars = self.df['turn'].values / self.df['turn'].max()
-        return fig, losses
+    def show(self, plotter=None, **kwargs):
+        if plotter is None:
+            plotter = pv.Plotter()
+
+        data = np.vstack([self.df['slos'],
+                          self.df['x'].abs()*1e3,  # [m] to [mm]
+                          self.df['y'].abs()*1e3]).T  # [m] to [mm]
+        points = pv.PolyData(data)
+        points['turn'] = self.df['turn'].values
+        plotter.add_mesh(points)
+        return plotter
