@@ -21,14 +21,15 @@ if __name__ == '__main__':
                         help='Include horizontal and vertical aperture offset',
                         action='store_true')
     parser.add_argument('-s', '--style',
-                        help='Plotting style, either "point", "line" or "surf".',
+                        help=('Plotting style, either "point", "line" or "surf".',
+                              'Note: "surf" is expensive to compute.'),
                         choices=['point', 'line', 'surf'],
                         default='line')
     args = parser.parse_args()
 
     aper = Profile(args.file)
 
-    aper.drop_interpolated()
+    # aper.drop_interpolated()
     aper.drop_consecutive_duplicates()
 
     plotter = aper.show(angles=np.linspace(0, 90, args.angles),
