@@ -18,7 +18,7 @@ if __name__ == '__main__':
                         help='Sixtrack aperture losses dump file.',
                         default=None)
     parser.add_argument('-o', '--offset',
-                        help='Include hoizontal and vertical aperture offset',
+                        help='Include horizontal and vertical aperture offset',
                         action='store_true')
     parser.add_argument('-s', '--style',
                         help='Plotting style, either "point", "line" or "surf".',
@@ -35,9 +35,13 @@ if __name__ == '__main__':
                         aper_cutoff=args.cuttoff,
                         with_offset=args.offset,
                         style=args.style)
-    # plotter.show()
     if args.loss_file is not None:
         losses = Losses(args.loss_file)
         plotter = losses.show(plotter=plotter)
-
+    # plotter.enable_eye_dome_lighting()
+    plotter.generate_orbital_path()
+    plotter.show_axes()
+    plotter.set_background((0, 0, 0))
+    # plotter.show_grid()
+    plotter.view_xy()
     plotter.show()

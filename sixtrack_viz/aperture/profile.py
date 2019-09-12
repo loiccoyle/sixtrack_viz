@@ -16,6 +16,11 @@ from . import shapes
 class Profile:
 
     def __init__(self, file):
+        """Handles the parsing of the aperture profile.
+
+        Args:
+            file (str/path): Path to sixtrack aperture dump file.
+        """
         if not isinstance(file, Path):
             file = Path(file)
         self.file = file
@@ -23,10 +28,18 @@ class Profile:
 
     @staticmethod
     def _col_parsing(string):
+        '''
+        Parses the first line to get columns names.
+        '''
         string = string.strip().replace('[m]', '').replace('[mm]', '').replace('[rad]', '')
         return string.split()[1:]
 
     def to_df(self):
+        '''Reads self.file to generate a DataFrame.
+
+        Returns:
+            pd.DataFrame: extracted DataFrame.
+        '''
         with self.file.open('r') as fp:
             line = fp.readline()
         cols = self._col_parsing(line)
@@ -35,14 +48,28 @@ class Profile:
         return df
 
     def drop_interpolated(self):
+        '''
+        Removes any row with name "interpolated".
+        '''
         self.df = self.df[self.df['name'] != 'interpolated']
 
     def drop_consecutive_duplicates(self):
+        '''
+        Drops any consecutive duplicates.
+        '''
         cols = ['aptype', 'aper1', 'aper2', 'aper3', 'aper4',
                 'aper5', 'aper6', 'aper7', 'aper8', 'xoff', 'yoff']
         self.df = self.df.loc[(self.df[cols].shift() != self.df[cols]).any(axis=1)]
 
     def get_aperture(self, angle):
+        '''Computes the aperture for a given angle.
+
+        Args:
+            angle (float): Angle at which to ocmpute the aperture, in degrees.
+
+        Returns:
+            np.array: 1d array containing the computed aperture.
+        '''
         rad_angle = math.radians(angle)
         if rad_angle != angle:
             angle = rad_angle
@@ -74,6 +101,14 @@ class Profile:
 
     @staticmethod
     def polyline_from_points(points):
+        """Creates a line from points.
+
+        Args:
+            points (np.array): (n, 3) shaped array.
+
+        Returns:
+            pv.PolyData: generated line.
+        """
         poly = pv.PolyData()
         poly.points = points
         the_cell = np.arange(0, len(points), dtype=np.int)
@@ -81,8 +116,29 @@ class Profile:
         poly.lines = the_cell
         return poly
 
-    def show(self, angles=np.linspace(0, 90, 20), aper_cutoff=50,
+    def show(self, angles=np.linspace(0, 90, 20), aper_cutoff=100,
              with_offset=False, plotter=None, style='line', **kwargs):
+        """Computes and plots the aperture, for the given angles.
+
+        Args:
+            angles (iterable, optional): Angles at which to compute the
+            apertures.
+            aper_cutoff (int, optional): Aperture radial cuttoff for plotting,
+            set to 0 or None to disable.
+            with_offset (bool, optional): Take into account the offset.
+            plotter (pyvista.Plotter, optional): If provided, will add the
+            computed mesh to the given pyvista.Plotter.
+            style (str, optional): either "point", "line" or "surf", controls
+            the style of the plotted aperture. "surf" requires additional
+            computation.
+            **kwargs: forwarded to pyvista.Plotter.add_mesh
+
+        Returns:
+            pyvista.Plotter: Plotter with the computed mesh.
+
+        Raises:
+            ValueError: When "style" is incorrect.
+        """
         if style not in ['line', 'surf', 'point']:
             cntnt = '"style" must be either "line", "surf" or "point".'
             raise ValueError(cntnt)
@@ -118,7 +174,7 @@ class Profile:
             for i, (s, x, y) in enumerate(zip(Ss, Ape_x, Ape_y)):
                 data = np.vstack([s, x, y]).T
                 lines = self.polyline_from_points(data)
-                plotter.add_mesh(lines, name=f'angle {angles[i]}')
+                plotter.add_mesh(lines, name=f'angle {angles[i]}', **kwargs)
 
         elif style in ['point', 'surf']:
             Ss = np.hstack(Ss)
@@ -126,9 +182,9 @@ class Profile:
             Ape_y = np.hstack(Ape_y)
             points = pv.PolyData(np.vstack([Ss, Ape_x, Ape_y]).T)
             if style == 'point':
-                plotter.add_mesh(points)
+                plotter.add_mesh(points, **kwargs)
             elif style == 'surf':
                 surf = points.delaunay_2d()
-                plotter.add_mesh(surf)
+                plotter.add_mesh(surf, **kwargs)
 
         return plotter
