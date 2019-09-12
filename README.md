@@ -4,5 +4,5 @@ A package and collection of scripts to vizualize the inputs and outputs of SixTr
 
 # 3D Sixtrack aperture
 
-[Sixtrack aperture model](/screenshots/aper_plot_IP.png)
+![Sixtrack aperture model](/screenshots/aper_plot_IP.png)
 
