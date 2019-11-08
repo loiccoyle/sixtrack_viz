@@ -2,12 +2,12 @@ import math
 
 
 def Circle(angle, R):
-    'angle in radians - range: [0:2pi] or [-pi:pi]'
+    '''angle in radians - range: [0:2pi] or [-pi:pi]'''
     return R
 
 
 def Ellipse(angle, a, b):
-    'angle in radians - range: [0:2pi] or [-pi:pi]'
+    '''angle in radians - range: [0:2pi] or [-pi:pi]'''
     ape = 0.0
     if (a != 0.0 and b != 0.0):
         ape = 1 / math.sqrt((math.cos(angle) / a)**2 +
@@ -16,7 +16,7 @@ def Ellipse(angle, a, b):
 
 
 def Rectangle(angle, a, b):
-    'angle in radians - range: [0:pi/2]'
+    '''angle in radians - range: [0:pi/2]'''
     if (angle == 0):
         ape = a
     elif (angle == math.pi / 2):
@@ -31,12 +31,12 @@ def Rectangle(angle, a, b):
 
 
 def RectEllipse(angle, a, b, c, d):
-    'angle in radians'
+    '''angle in radians'''
     return min(Rectangle(angle, a, b), Ellipse(angle, c, d))
 
 
 def Line(angle, ml, ql):
-    'angle in radians - range: [0:pi/2]'
+    '''angle in radians - range: [0:pi/2]'''
     m = math.tan(angle)
     if (angle == 0):
         ape = -ql / ml
@@ -49,14 +49,14 @@ def Line(angle, ml, ql):
 
 
 def Octagon(angle, a, b, theta1, theta2):
-    'angle in radians - range: [0:pi/2]'
+    '''angle in radians - range: [0:pi/2]'''
     mO = (b - a * math.tan(theta1)) / (b / math.tan(theta2) - a)
     qO = a * math.tan(theta1) - mO * a
     return min(Rectangle(angle, a, b), Line(angle, mO, qO))
 
 
 def Racetrack(angle, aprx, apry, apex, apey):
-    'angle in radians - range: [0:pi/2]'
+    '''angle in radians - range: [0:pi/2]'''
     if (angle == 0):
         ape = aprx + apex
     elif (angle == math.pi / 2):

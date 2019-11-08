@@ -25,9 +25,19 @@ if __name__ == '__main__':
                               'Note: "surf" is expensive to compute.'),
                         choices=['point', 'line', 'surf'],
                         default='line')
+    parser.add_argument('-t', '--start', help='Start row. Element line number -2',
+                        default=0, type=int)
+    parser.add_argument('-e', '--end', help='End row. Element line number -2',
+                        default=-1, type=int)
+    parser.add_argument('-m', '--mirror', help="Mirror the aperture, 'H', 'V' or 'HV'",
+                        type=str, default='')
     args = parser.parse_args()
 
     aper = Profile(args.file)
+
+    aper.df = aper.df.iloc[args.start: args.end, :]
+
+    # print(aper.df['name'])
 
     # aper.drop_interpolated()
     aper.drop_consecutive_duplicates()
@@ -35,7 +45,8 @@ if __name__ == '__main__':
     plotter = aper.show(angles=np.linspace(0, 90, args.angles),
                         aper_cutoff=args.cuttoff,
                         with_offset=args.offset,
-                        style=args.style)
+                        style=args.style,
+                        mirror=args.mirror)
     if args.loss_file is not None:
         losses = Losses(args.loss_file)
         plotter = losses.show(plotter=plotter)
@@ -44,5 +55,5 @@ if __name__ == '__main__':
     plotter.show_axes()
     plotter.set_background((0, 0, 0))
     # plotter.show_grid()
-    plotter.view_xy()
+    plotter.view_yz(negative=True)
     plotter.show()

@@ -59,7 +59,9 @@ class Profile:
         '''
         cols = ['aptype', 'aper1', 'aper2', 'aper3', 'aper4',
                 'aper5', 'aper6', 'aper7', 'aper8', 'xoff', 'yoff']
-        self.df = self.df.loc[(self.df[cols].shift() != self.df[cols]).any(axis=1)]
+        mask1 = (self.df[cols].shift() != self.df[cols]).any(axis=1)
+        mask2 = (self.df[cols].shift(-1) != self.df[cols]).any(axis=1)
+        self.df = self.df.loc[np.logical_or(mask1, mask2)]
 
     def get_aperture(self, angle):
         '''Computes the aperture for a given angle.
@@ -70,9 +72,9 @@ class Profile:
         Returns:
             np.array: 1d array containing the computed aperture.
         '''
-        rad_angle = math.radians(angle)
-        if rad_angle != angle:
-            angle = rad_angle
+        # rad_angle = math.radians(angle)
+        # if rad_angle != angle:
+        #     angle = rad_angle
 
         funcs = {
                  'CR': shapes.Circle,
@@ -117,7 +119,8 @@ class Profile:
         return poly
 
     def show(self, angles=np.linspace(0, 90, 20), aper_cutoff=100,
-             with_offset=False, plotter=None, style='line', **kwargs):
+             with_offset=False, plotter=None, style='line', mirror=None,
+             **kwargs):
         """Computes and plots the aperture, for the given angles.
 
         Args:
@@ -131,6 +134,8 @@ class Profile:
             style (str, optional): either "point", "line" or "surf", controls
             the style of the plotted aperture. "surf" requires additional
             computation.
+            mirror (str, optional): mirrors the apperture, either 'H', 'V' or
+            'HV'.
             **kwargs: forwarded to pyvista.Plotter.add_mesh
 
         Returns:
@@ -142,6 +147,8 @@ class Profile:
         if style not in ['line', 'surf', 'point']:
             cntnt = '"style" must be either "line", "surf" or "point".'
             raise ValueError(cntnt)
+        if mirror is not None and not set(mirror) <= set('HV'):
+            raise ValueError('"mirror" must be "H", "V" or "HV".')
 
         if plotter is None:
             plotter = pv.Plotter()
@@ -161,26 +168,36 @@ class Profile:
 
             # cutoff to remove large apertures
             if aper_cutoff is not None and aper_cutoff > 0:
-                filter_ar = np.sqrt(tmpApe_x**2 + tmpApe_y**2) < aper_cutoff
-                tmpSs = tmpSs[filter_ar]
-                tmpApe_x = tmpApe_x[filter_ar]
-                tmpApe_y = tmpApe_y[filter_ar]
+                cutt_off_mask = np.sqrt(tmpApe_x**2 + tmpApe_y**2) < aper_cutoff
+                tmpSs = tmpSs[cutt_off_mask]
+                tmpApe_x = tmpApe_x[cutt_off_mask]
+                tmpApe_y = tmpApe_y[cutt_off_mask]
 
             Ss.append(tmpSs)
             Ape_x.append(tmpApe_x)
             Ape_y.append(tmpApe_y)
 
+        if 'H' in mirror:
+            Ss.extend(Ss)
+            Ape_x.extend([-x for x in Ape_x])
+            Ape_y.extend(Ape_y)
+
+        if 'V' in mirror:
+            Ss.extend(Ss)
+            Ape_x.extend(Ape_x)
+            Ape_y.extend([-y for y in Ape_y])
+
         if style == 'line':
             for i, (s, x, y) in enumerate(zip(Ss, Ape_x, Ape_y)):
-                data = np.vstack([s, x, y]).T
+                data = np.vstack([x, y, s]).T
                 lines = self.polyline_from_points(data)
-                plotter.add_mesh(lines, name=f'angle {angles[i]}', **kwargs)
+                plotter.add_mesh(lines, name=f'angle {i}', **kwargs)
 
         elif style in ['point', 'surf']:
             Ss = np.hstack(Ss)
             Ape_x = np.hstack(Ape_x)
             Ape_y = np.hstack(Ape_y)
-            points = pv.PolyData(np.vstack([Ss, Ape_x, Ape_y]).T)
+            points = pv.PolyData(np.vstack([Ape_x, Ape_y, Ss]).T)
             if style == 'point':
                 plotter.add_mesh(points, **kwargs)
             elif style == 'surf':
