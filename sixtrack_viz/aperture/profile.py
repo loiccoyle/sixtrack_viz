@@ -162,9 +162,6 @@ class Profile:
             tmpApe = self.get_aperture(a)
             tmpApe_x = tmpApe * np.cos(a)
             tmpApe_y = tmpApe * np.sin(a)
-            if with_offset:
-                tmpApe_x = tmpApe_x + self.df['xoff'].values
-                tmpApe_y = tmpApe_y + self.df['yoff'].values
 
             # cutoff to remove large apertures
             if aper_cutoff is not None and aper_cutoff > 0:
@@ -186,6 +183,10 @@ class Profile:
             Ss.extend(Ss)
             Ape_x.extend(Ape_x)
             Ape_y.extend([-y for y in Ape_y])
+
+        if with_offset:
+            Ape_x = [x + self.df['xoff'] for x in Ape_x]
+            Ape_y = [y + self.df['yoff'] for y in Ape_y]
 
         if style == 'line':
             for i, (s, x, y) in enumerate(zip(Ss, Ape_x, Ape_y)):
