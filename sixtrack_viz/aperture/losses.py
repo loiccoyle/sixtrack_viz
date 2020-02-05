@@ -45,9 +45,10 @@ class Losses:
         if plotter is None:
             plotter = pv.Plotter()
 
-        data = np.vstack([self.df['slos'],
-                          self.df['x'].abs()*1e3,  # [m] to [mm]
-                          self.df['y'].abs()*1e3]).T  # [m] to [mm]
+        data = np.vstack([self.df['x'].abs()*1e3,  # [m] to [mm]
+                          self.df['y'].abs()*1e3,  # [m] to [mm]
+                          self.df['slos']]).T
+
         points = pv.PolyData(data)
         points['turn'] = self.df['turn'].values
         plotter.add_mesh(points, **kwargs)
