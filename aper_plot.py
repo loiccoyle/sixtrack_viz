@@ -3,8 +3,8 @@ import argparse
 import numpy as np
 
 
-from sixtrack_viz.aperture.profile import Profile
-from sixtrack_viz.aperture.losses import Losses
+from sixtrack_viz.aperture import Profile
+from sixtrack_viz.aperture import Losses
 
 
 if __name__ == '__main__':
