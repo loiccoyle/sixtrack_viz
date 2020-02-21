@@ -26,7 +26,7 @@ class Losses:
         '''
         with self.file.open('r') as fp:
             line = fp.readline()
-        cols = line.rstrip().split(' ')[1:]
+        cols = line.rstrip().split()[1:]
         df = pd.read_csv(self.file, delim_whitespace=True, names=cols,
                          skiprows=1, index_col=None)
         return df
@@ -45,8 +45,8 @@ class Losses:
         if plotter is None:
             plotter = pv.Plotter()
 
-        data = np.vstack([self.df['x'].abs()*1e3,  # [m] to [mm]
-                          self.df['y'].abs()*1e3,  # [m] to [mm]
+        data = np.vstack([self.df['x[m]'].abs()*1e3,  # [m] to [mm]
+                          self.df['y[m]'].abs()*1e3,  # [m] to [mm]
                           self.df['slos']]).T
 
         points = pv.PolyData(data)
