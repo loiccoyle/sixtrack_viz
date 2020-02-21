@@ -98,6 +98,9 @@ class Profile:
         def calc_ape(row, angle):
             func = funcs[row[1]]
             args = row[indices[row[1]]]
+            # need to double check this
+            if row[11] != 0:
+                angle = abs(angle - math.radians(row[11]) % (math.pi / 2))
             return func(angle, *args)
         return np.apply_along_axis(calc_ape, 1, self.df.values, angle=angle)
 
@@ -156,6 +159,9 @@ class Profile:
         Ss = []
         Ape_x = []
         Ape_y = []
+        cut_off_masks = []
+        # this whole way of scanning the angles is quite awkward and would
+        # welcome a rewrite. Especially the handling of the cutoffs.
         for a in tqdm(angles, desc='Computing aperture'):
             a = math.radians(a)
             tmpSs = self.df['s'].values
@@ -165,10 +171,13 @@ class Profile:
 
             # cutoff to remove large apertures
             if aper_cutoff is not None and aper_cutoff > 0:
-                cutt_off_mask = np.sqrt(tmpApe_x**2 + tmpApe_y**2) < aper_cutoff
-                tmpSs = tmpSs[cutt_off_mask]
-                tmpApe_x = tmpApe_x[cutt_off_mask]
-                tmpApe_y = tmpApe_y[cutt_off_mask]
+                cut_off_mask = np.sqrt(tmpApe_x**2 + tmpApe_y**2) < aper_cutoff
+                tmpSs = tmpSs[cut_off_mask]
+                tmpApe_x = tmpApe_x[cut_off_mask]
+                tmpApe_y = tmpApe_y[cut_off_mask]
+                cut_off_masks.append(cut_off_mask)
+            else:
+                cut_off_masks.append([True]*len(tmpApe_x))
 
             Ss.append(tmpSs)
             Ape_x.append(tmpApe_x)
@@ -178,15 +187,18 @@ class Profile:
             Ss.extend(Ss)
             Ape_x.extend([-x for x in Ape_x])
             Ape_y.extend(Ape_y)
+            cut_off_masks.extend(cut_off_masks)
 
         if 'V' in mirror:
             Ss.extend(Ss)
             Ape_x.extend(Ape_x)
             Ape_y.extend([-y for y in Ape_y])
+            cut_off_masks.extend(cut_off_masks)
 
+        # this cut off mask thing is quite awkward
         if with_offset:
-            Ape_x = [x + self.df['xoff'] for x in Ape_x]
-            Ape_y = [y + self.df['yoff'] for y in Ape_y]
+            Ape_x = [x + self.df['xoff'][mask] for x, mask in zip(Ape_x, cut_off_masks)]
+            Ape_y = [y + self.df['yoff'][mask] for y, mask in zip(Ape_y, cut_off_masks)]
 
         if style == 'line':
             for i, (s, x, y) in enumerate(zip(Ss, Ape_x, Ape_y)):
