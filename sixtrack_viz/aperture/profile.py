@@ -100,7 +100,7 @@ class Profile:
             args = row[indices[row[1]]]
             # need to double check this
             if row[11] != 0:
-                angle = abs(angle - row[11]) % (math.pi / 2)
+                angle = abs(angle - row[11] % (math.pi / 2))
             return func(angle, *args)
         return np.apply_along_axis(calc_ape, 1, self.df.values, angle=angle)
 
